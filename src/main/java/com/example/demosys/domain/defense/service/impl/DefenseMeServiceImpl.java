@@ -1,14 +1,14 @@
 package com.example.demosys.domain.defense.service.impl;
 
+import com.example.demosys.domain.defense.service.DefenseMeService;
 import org.springframework.stereotype.Service;
-import com.example.demosys.domain.auth.service.MeService;
 
 /**
  * MeServiceImpl
  * 自动生成的实现骨架（TODO）。
  */
 @Service
-public class DefenseMeServiceImpl implements MeService {
+public class DefenseMeServiceImpl implements DefenseMeService {
 
     /**
      * 描述：当前登录用户信息（含角色/院系/权限）

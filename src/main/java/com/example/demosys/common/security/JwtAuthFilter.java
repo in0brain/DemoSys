@@ -5,6 +5,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -15,19 +19,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import java.util.Collections;
+import java.util.*;
+import java.util.stream.Collectors;
 
-
-
-
-/**
- * JwtAuthFilter（最小版）
- * 说明：
- * - 这里只做“能解析 JWT 并放行”的骨架
- * - 你后续要把 UserPrincipal 放入 SecurityContext，需要补 UserDetails + Authentication
- */
 @Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
@@ -52,6 +46,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = auth.substring(HeaderConstants.BEARER_PREFIX.length()).trim();
             try {
                 Claims claims = Jwts.parserBuilder()
+                        // ✅ 修正：必须是 HmacSHA256（别写成 HmacSHA）
                         .setSigningKey(new SecretKeySpec(secret, "HmacSHA256"))
                         .build()
                         .parseClaimsJws(token)
@@ -62,6 +57,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 String displayName = claims.get("displayName", String.class);
 
+                // roles 可能是 List，也可能解析成 ArrayList<Object>，统一转成 List<String>
+                List<String> roles = extractRoles(claims.get("roles"));
+
+                // ✅ 修正：用 List<? extends GrantedAuthority> 或者转成 List<GrantedAuthority>
+                List<? extends GrantedAuthority> authorities = roles.stream()
+                        .filter(Objects::nonNull)
+                        .map(String::valueOf)
+                        .filter(s -> !s.isBlank())
+                        .map(r -> r.startsWith("ROLE_") ? r : "ROLE_" + r)
+                        .map(SimpleGrantedAuthority::new)
+                        .collect(Collectors.toList());
+
                 UserPrincipal principal = new UserPrincipal(
                         username,
                         displayName,
@@ -70,17 +77,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 );
 
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                principal,
-                                null,
-                                Collections.emptyList()
-                        );
+                        new UsernamePasswordAuthenticationToken(principal, null, authorities);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
+                // 调试用（确认角色进来了）
+                 log.info("[JWT] user={} roles={} auth={}", username, roles, authorities);
+
             } catch (Exception e) {
                 log.warn("JWT parse failed: {}", e.getMessage());
-                // 可选：直接 401
+                // 可选：严格模式直接 401
                 // response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 // return;
             }
@@ -89,4 +95,34 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * 把 claims.roles 解析成 List<String>，兼容：
+     * - null
+     * - List<String>
+     * - List<Object>
+     * - 单个 String
+     */
+    private List<String> extractRoles(Object raw) {
+        if (raw == null) return Collections.emptyList();
+
+        if (raw instanceof String) {
+            String s = ((String) raw).trim();
+            return s.isEmpty() ? Collections.emptyList() : List.of(s);
+        }
+
+        if (raw instanceof Collection<?>) {
+            List<String> out = new ArrayList<>();
+            for (Object o : (Collection<?>) raw) {
+                if (o != null) {
+                    String s = String.valueOf(o).trim();
+                    if (!s.isEmpty()) out.add(s);
+                }
+            }
+            return out;
+        }
+
+        // 兜底
+        String s = String.valueOf(raw).trim();
+        return s.isEmpty() ? Collections.emptyList() : List.of(s);
+    }
 }

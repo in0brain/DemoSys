@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -44,10 +43,10 @@ public class LocalAuthServiceImpl implements LocalAuthService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "请输入账号和密码");
         }
 
-        // 1) 先标准化 username（避免前端多空格导致查不到）
+        // 1) 标准化 username（避免前端多空格导致查不到）
         final String username = req.getUsername().trim();
 
-        // 2) password 先不动，先观测真实输入长度/是否有首尾空格
+        // 2) password 先不动，联调阶段观测真实输入（是否有首尾空格）
         final String rawPassword = req.getPassword();
         final boolean pwHasEdgeSpaces = rawPassword != null && !rawPassword.equals(rawPassword.trim());
 
@@ -81,9 +80,9 @@ public class LocalAuthServiceImpl implements LocalAuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "账号已被禁用");
         }
 
-        // provider 约定：LOCAL 才允许密码登录
-        if (user.getAuthProvider() != null && !"LOCAL".equalsIgnoreCase(user.getAuthProvider())) {
-            log.warn("[LOGIN] provider not LOCAL id={} username='{}' provider={}",
+        // provider 约定：local 才允许密码登录
+        if (user.getAuthProvider() != null && !"local".equalsIgnoreCase(user.getAuthProvider())) {
+            log.warn("[LOGIN] provider not local id={} username='{}' provider={}",
                     user.getId(), username, user.getAuthProvider());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "该账号不支持本地密码登录");
         }
@@ -101,32 +100,33 @@ public class LocalAuthServiceImpl implements LocalAuthService {
         log.info("[LOGIN] passwordMatches raw={} trim={} (if trim=true => 前端/用户输入有空格)",
                 matchRaw, matchTrim);
 
-        // 这里你可以选择策略：
-        // A) 严格：只接受原始输入（不改变语义）
-        // if (!matchRaw) throw ...
-
-        // B) 兼容：允许首尾空格（联调阶段非常实用）
+        // 兼容：允许首尾空格（联调阶段实用）；上线可改成严格 matchRaw
         if (!matchRaw && !matchTrim) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "账号或密码错误");
         }
-
-        // 如果是 trim 才匹配，你也可以记录一下，之后让前端修复
         if (!matchRaw && matchTrim) {
             log.warn("[LOGIN] password matched only after trim. username='{}' (建议前端trim输入)", username);
         }
 
-        List<String> roleCodes = roleMapper.selectRoleCodesByUserId(user.getId());
-        HashSet<String> rolesSet = new HashSet<>(roleCodes == null ? List.of() : roleCodes);
+        // 6) 查角色（✅使用 List 放入 JWT，避免 Set 类型不稳定）
+        List<String> roles = roleMapper.selectRoleCodesByUserId(user.getId());
+        if (roles == null) roles = List.of();
 
+        // 7) 生成 JWT（✅roles 直接写入 claims）
         Map<String, Object> claims = new HashMap<>();
         claims.put("username", user.getUsername());
         claims.put("displayName", user.getDisplayName());
-        claims.put("roles", rolesSet);
+        claims.put("roles", roles);
 
         String token = tokenService.createToken(user.getUsername(), claims);
 
-        try { userMapper.updateLastLoginAt(user.getId()); } catch (Exception ignored) {}
+        // 8) 记录 last_login_at（失败也不影响登录）
+        try {
+            userMapper.updateLastLoginAt(user.getId());
+        } catch (Exception ignored) {
+        }
 
+        // 9) 返回
         return new LocalLoginResponse(
                 new UserBriefDTO(user.getUsername(), user.getDisplayName()),
                 "Bearer",

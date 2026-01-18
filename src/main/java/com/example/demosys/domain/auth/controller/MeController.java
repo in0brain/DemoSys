@@ -1,42 +1,43 @@
 package com.example.demosys.domain.auth.controller;
 
-import org.springframework.web.bind.annotation.*;
 import com.example.demosys.common.api.ApiResponse;
+import com.example.demosys.domain.auth.service.MeService;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * MeController
- * <p>
- * 由《接口清单_RESTful_v1_对齐IR.xlsx》自动生成的 Controller 骨架（按模块/路径分组）。
- * 请在实现时：补充 DTO、鉴权（@PreAuthorize 或自定义注解）、校验（@Validated）与 Service 调用。
- * </p>
- */
+import java.util.Map;
+
 @RestController
 @RequestMapping("/me")
 public class MeController {
 
-    /**
-     * 描述：当前登录用户信息（含角色/院系/权限）
-     * 关联：IR-AUTH-1
-     * 备注：前端菜单/按钮控制
-     */
-    @GetMapping("/")
-    public ApiResponse me() {
-        Object principal = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication().getPrincipal();
-        return ApiResponse.ok(principal);
+    private final MeService meService;
+
+    public MeController(MeService meService) {
+        this.meService = meService;
     }
 
-    /**
-     * 描述：权限点列表
-     * 关联：IR-AUTH-1, IR-AUTH-2
-     * 备注：可选
-     */
+    @GetMapping("/")
+    public ApiResponse me(@RequestParam(required = false) Map<String, Object> params) {
+        return ApiResponse.ok(meService.getProfile(params));
+    }
+
     @GetMapping("/permissions")
-    public ApiResponse listPermissions(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer pageSize, @RequestParam(required = false) java.util.Map<String, String> filters) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+    public ApiResponse listPermissions(@RequestParam(required = false) Integer page,
+                                       @RequestParam(required = false) Integer pageSize,
+                                       @RequestParam(required = false) Map<String, Object> filters) {
+        return ApiResponse.ok(meService.listPermissions(filters));
+    }
+    @GetMapping("/debug/auth")
+    public Object debugAuth() {
+        Authentication a = SecurityContextHolder.getContext().getAuthentication();
+        return Map.of(
+                "name", a.getName(),
+                "principalClass", a.getPrincipal().getClass().getName(),
+                "authorities", a.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList()
+        );
     }
 
 }

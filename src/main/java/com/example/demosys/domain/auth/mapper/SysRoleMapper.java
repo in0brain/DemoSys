@@ -8,4 +8,5 @@ import java.util.List;
 @Mapper
 public interface SysRoleMapper {
     List<String> selectRoleCodesByUserId(@Param("userId") Long userId);
+    List<String> selectRoleCodesByUsername(@Param("username") String username);
 }
