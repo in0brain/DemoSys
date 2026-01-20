@@ -1,95 +1,105 @@
 package com.example.demosys.domain.admissions.controller;
 
+import com.example.demosys.domain.admissions.dto.OffersDraftItemsBatchAddRequest;
 import org.springframework.web.bind.annotation.*;
 import com.example.demosys.common.api.ApiResponse;
+import com.example.demosys.domain.admissions.dto.OffersDraftsPublishResponse;
+import com.example.demosys.domain.admissions.service.OfferDraftService;
+import com.example.demosys.domain.admissions.service.OfferPublicationService;
 
-/**
- * OfferController
- * <p>
- * 由《接口清单_RESTful_v1_对齐IR.xlsx》自动生成的 Controller 骨架（按模块/路径分组）。
- * 请在实现时：补充 DTO、鉴权（@PreAuthorize 或自定义注解）、校验（@Validated）与 Service 调用。
- * </p>
- */
+import java.util.Map;
+
 @RestController
 @RequestMapping("/admissions")
 public class OfferController {
 
+    private final OfferDraftService offerDraftService;
+    private final OfferPublicationService offerPublicationService;
+
+    public OfferController(OfferDraftService offerDraftService,
+                           OfferPublicationService offerPublicationService) {
+        this.offerDraftService = offerDraftService;
+        this.offerPublicationService = offerPublicationService;
+    }
+
     /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：拟录取草稿列表
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
+     * ⚠️ 不建议再用 GET 生成草稿（保留接口但不做事，避免误点）
      */
     @GetMapping("/offers/drafts")
-    public ApiResponse listOffersDrafts(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer pageSize, @RequestParam(required = false) java.util.Map<String, String> filters) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+    public ApiResponse listOffersDrafts() {
+        return ApiResponse.ok("Use POST /admissions/offers/drafts to create a draft.");
     }
     /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：生成拟录取草稿（按规则/批次）
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
+     * ✅ 正式生成草稿：POST
+     * Step1：生成 draft
      */
     @PostMapping("/offers/drafts")
-    public ApiResponse createOffersDrafts(@RequestBody Object request) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+    public ApiResponse createOffersDrafts(@RequestBody(required = false) Object request) {
+        return ApiResponse.ok(offerDraftService.createDraft());
     }
+
     /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：草稿详情预览（脱敏视图）
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
+     * ⚠️ 当前版本不支持按 draftId 查询历史草稿
+     * 所以不要在这里 createDraft（否则会制造新 draft）
      */
     @GetMapping("/offers/drafts/{draftId}")
     public ApiResponse getOffersDraftsBy(@PathVariable("draftId") String draftId) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+        return ApiResponse.ok(offerDraftService.getDraft(draftId));
     }
+
     /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：发布公示（审核通过后）
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
+     * Step2：发布公示
      */
     @PostMapping("/offers/drafts/{draftId}/publish")
-    public ApiResponse createOffersDraftsByPublish(@PathVariable("draftId") String draftId, @RequestBody Object request) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+    public ApiResponse createOffersDraftsByPublish(@PathVariable("draftId") String draftId,
+                                                   @RequestBody(required = false) Object request) {
+        offerPublicationService.publish(draftId);
+
+        OffersDraftsPublishResponse resp = new OffersDraftsPublishResponse();
+        resp.setDraftId(draftId);
+        resp.setPublished(true);
+        return ApiResponse.ok(resp);
     }
-    /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：提交发布审批
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
-     */
+
+    /* ===== 以下接口：当前主干明确不做，保留占位即可 ===== */
+
     @PostMapping("/offers/drafts/{draftId}/submit-approval")
-    public ApiResponse createOffersDraftsBySubmitApproval(@PathVariable("draftId") String draftId, @RequestBody Object request) {
-        // TODO: implement
+    public ApiResponse submitApproval(@PathVariable String draftId,
+                                      @RequestBody Object request) {
         return ApiResponse.ok(null);
     }
-    /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：公示期变更（留痕/版本）
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
-     */
+
     @PutMapping("/offers/publications/{pubId}")
-    public ApiResponse updateOffersPublicationsBy(@PathVariable("pubId") String pubId, @RequestBody Object request) {
-        // TODO: implement
+    public ApiResponse updatePublication(@PathVariable String pubId,
+                                         @RequestBody Object request) {
         return ApiResponse.ok(null);
     }
-    /**
-     * 分组：2.2 拟录取公示（SR-ADM-2）
-     * 描述：公示结束/下线归档
-     * 角色：招生管理员
-     * 关联：SR-ADM-2
-     */
+
     @PostMapping("/offers/publications/{pubId}/close")
-    public ApiResponse createOffersPublicationsByClose(@PathVariable("pubId") String pubId, @RequestBody Object request) {
-        // TODO: implement
+    public ApiResponse closePublication(@PathVariable String pubId,
+                                        @RequestBody Object request) {
         return ApiResponse.ok(null);
     }
+
+    @PostMapping("/offers/drafts/items")
+    public ApiResponse addOffersDraftItem(@RequestBody Map<String, Object> body) {
+        Object v = body == null ? null : body.get("candidateId");
+        if (v == null) return ApiResponse.fail("candidateId is required");
+        Long candidateId = Long.valueOf(String.valueOf(v));
+
+        return ApiResponse.ok(offerDraftService.addCandidate(candidateId));
+    }
+
+    @GetMapping("/offers/drafts/items")
+    public ApiResponse listOffersDraftItems() {
+        // 全表查（不带 draftId 条件）
+        return ApiResponse.ok(offerDraftService.listAllItems());
+    }
+
+    @PostMapping("/offers/drafts/items/batch")
+    public ApiResponse addDraftItemsBatch(@RequestBody OffersDraftItemsBatchAddRequest request) {
+        return ApiResponse.ok(offerDraftService.addDraftItemsBatch(request));
+    }
+
 
 }

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demosys.domain.admissions.mapper.OfferDraftMapper">
+
+    <delete id="clearAll">
+        DELETE FROM admissions_offer_draft
+    </delete>
+
+    <insert id="insertFromInterviewScore">
+        INSERT IGNORE INTO admissions_offer_draft
+        (draft_id, candidate_id, admit_flag, create_time, update_time)
+        SELECT
+        #{draftId},
+        s.candidate_id,
+        1,
+        NOW(),
+        NOW()
+        FROM admissions_interview_score s
+    </insert>
+
+
+    <select id="selectItems"
+            resultType="com.example.demosys.domain.admissions.mapper.OfferDraftMapper$OfferDraftRow">
+        SELECT
+        d.draft_id     AS draftId,
+        d.candidate_id AS candidateId,
+        d.admit_flag   AS admitFlag,
+        c.exam_no      AS examNo,
+        c.name         AS name,
+        c.major        AS major
+        FROM admissions_offer_draft d
+        JOIN admissions_candidate c ON c.id = d.candidate_id
+        <where>
+            <if test="draftId != null and draftId != ''">
+                d.draft_id = #{draftId}
+            </if>
+        </where>
+        ORDER BY d.id DESC
+    </select>
+
+
+    <insert id="insertOne">
+        INSERT IGNORE INTO admissions_offer_draft
+        (draft_id, candidate_id, admit_flag, create_time, update_time)
+        VALUES
+        (#{draftId}, #{candidateId}, #{admitFlag}, NOW(), NOW())
+    </insert>
+
+    <insert id="batchInsertCandidates">
+        INSERT IGNORE INTO admissions_offer_draft
+        (draft_id, candidate_id, admit_flag, create_time, update_time)
+        VALUES
+        <foreach collection="candidateIds" item="cid" separator=",">
+            (#{draftId}, #{cid}, 1, NOW(), NOW())
+        </foreach>
+    </insert>
+
+
+</mapper>

@@ -1,62 +1,100 @@
 package com.example.demosys.domain.admissions.service.impl;
 
-import com.example.demosys.domain.admissions.dto.CandidatesInterviewScoreRequest;
-import com.example.demosys.domain.admissions.dto.InterviewScoresImportRequest;
-import com.example.demosys.domain.admissions.dto.InterviewScoresLockRequest;
-import org.springframework.stereotype.Service;
+import com.example.demosys.domain.admissions.dto.CandidatesInterviewScoreResponse;
+import com.example.demosys.domain.admissions.dto.InterviewScoreListResponse;
+import com.example.demosys.domain.admissions.mapper.CandidateMapper;
+import com.example.demosys.domain.admissions.mapper.InterviewScoreMapper;
 import com.example.demosys.domain.admissions.service.InterviewScoreService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * InterviewScoreServiceImpl
- * 自动生成的实现骨架（TODO）。
- */
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
+@RequiredArgsConstructor
 public class InterviewScoreServiceImpl implements InterviewScoreService {
 
-    /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：录入/更新单个考生复试成绩（含校验）
-     * 角色：招生管理员
-     * 关联：SR-ADM-1
-     */
+    private final CandidateMapper candidateMapper;
+    private final InterviewScoreMapper interviewScoreMapper;
+
+    @Transactional
     @Override
-    public Object updateCandidatesByidInterviewScore(CandidatesInterviewScoreRequest request) {
-        // TODO: implement
-        return null;
+    public void submit(Long candidateId, BigDecimal score) {
+        if (candidateId == null) {
+            throw new IllegalArgumentException("candidateId不能为空");
+        }
+        if (score == null) {
+            throw new IllegalArgumentException("score不能为空");
+        }
+        if (score.compareTo(BigDecimal.ZERO) < 0 || score.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("分数范围应为0~100");
+        }
+
+        // 考生存在性（mapper 的 selectById 返回 CandidateRow）
+        CandidateMapper.CandidateRow c = candidateMapper.selectById(candidateId);
+        if (c == null) {
+            throw new IllegalArgumentException("考生不存在");
+        }
+
+        // 一次性提交（已存在则拒绝）
+        if (interviewScoreMapper.selectByCandidateId(candidateId) != null) {
+            throw new IllegalStateException("成绩已提交并锁定，不可重复提交");
+        }
+
+        interviewScoreMapper.insert(candidateId, score);
     }
-    /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：导出成绩汇总（Excel/PDF）
-     * 角色：招生管理员
-     * 关联：SR-ADM-1
-     */
+
     @Override
-    public Object listInterviewScoresExport(java.util.Map<String, Object> params) {
-        // TODO: implement
-        return null;
+    public CandidatesInterviewScoreResponse getByCandidateId(Long candidateId) {
+        var row = interviewScoreMapper.selectByCandidateId(candidateId);
+        if (row == null) return null;
+
+        CandidatesInterviewScoreResponse resp = new CandidatesInterviewScoreResponse();
+        resp.setId(row.id);
+        resp.setCandidateId(row.candidateId);
+        resp.setScore(row.score);
+        resp.setLocked(true);
+        // createdAt/updatedAt 需要 mapper select 把 create_time/update_time 查出来（见下）
+        return resp;
     }
-    /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：批量导入成绩（Excel）
-     * 角色：招生管理员
-     * 关联：SR-ADM-1
-     * 备注：建议：返回 jobId，GET /jobs/{jobId} 查询导入结果
-     */
+
     @Override
-    public Object createInterviewScoresImport(InterviewScoresImportRequest request) {
-        // TODO: implement
-        return null;
-    }
-    /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：成绩锁定（截止后只读）
-     * 角色：招生管理员/更高权限
-     * 关联：SR-ADM-1
-     */
-    @Override
-    public Object createInterviewScoresLock(InterviewScoresLockRequest request) {
-        // TODO: implement
-        return null;
+    @Transactional(readOnly = true)
+    public InterviewScoreListResponse list(int page, int pageSize) {
+
+        // 1) 参数兜底
+        int p = page <= 0 ? 1 : page;
+        int ps = pageSize <= 0 ? 10 : pageSize;
+        int offset = (p - 1) * ps;
+
+        // 2) 查询数据库（联表）
+        List<InterviewScoreMapper.InterviewScoreListRow> rows =
+                interviewScoreMapper.selectPage(offset, ps);
+
+        long total = interviewScoreMapper.countAll();
+
+        // 3) 组装返回 DTO
+        InterviewScoreListResponse resp = new InterviewScoreListResponse();
+        resp.setPage(p);
+        resp.setPageSize(ps);
+        resp.setTotal(total);
+
+        List<InterviewScoreListResponse.Item> items = new ArrayList<>();
+        for (InterviewScoreMapper.InterviewScoreListRow r : rows) {
+            InterviewScoreListResponse.Item it = new InterviewScoreListResponse.Item();
+            it.setCandidateId(r.candidateId);
+            it.setExamNo(r.examNo);
+            it.setName(r.name);
+            it.setMajor(r.major);
+            it.setScore(r.score);
+            items.add(it);
+        }
+        resp.setItems(items);
+
+        return resp;
     }
 
 }

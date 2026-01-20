@@ -1,23 +1,18 @@
 package com.example.demosys.domain.admissions.entity;
 
 import lombok.Data;
-import javax.persistence.*;
 import java.time.LocalDateTime;
 
-/**
- * OfferDraftEntity
- * 实体占位类：请按招生模块表结构补充字段。
- */
 @Data
-@Entity
-@Table(name = "offerdraftentity")
 public class OfferDraftEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long id;            // 主键（单行记录ID）
+    private Long draftId;       // 草稿批次ID（关键：publish 用它分组）
+    private Long candidateId;   // 考生ID
+
+    // 是否拟录取（你发布时按这个过滤 true）
+    private Boolean admitFlag;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
 }

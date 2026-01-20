@@ -1,52 +1,52 @@
 package com.example.demosys.domain.admissions.controller;
 
-import org.springframework.web.bind.annotation.*;
 import com.example.demosys.common.api.ApiResponse;
+import com.example.demosys.domain.admissions.service.InterviewScoreService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * InterviewScoreController
- * <p>
- * 由《接口清单_RESTful_v1_对齐IR.xlsx》自动生成的 Controller 骨架（按模块/路径分组）。
- * 请在实现时：补充 DTO、鉴权（@PreAuthorize 或自定义注解）、校验（@Validated）与 Service 调用。
- * </p>
- */
+import java.util.Map;
+
 @RestController
 @RequestMapping("/admissions")
+@RequiredArgsConstructor
 public class InterviewScoreController {
 
+    private final InterviewScoreService interviewScoreService;
+
     /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：导出成绩汇总（Excel/PDF）
-     * 角色：招生管理员
-     * 关联：SR-ADM-1
+     * ✅ 复试成绩列表（联表展示用）
+     * 用于：拟录取草稿页先展示复试成绩，再勾选加入拟录取
      */
+    @GetMapping("/interview-scores")
+    public ApiResponse listInterviewScores(@RequestParam(required = false) Integer page,
+                                           @RequestParam(required = false) Integer pageSize,
+                                           @RequestParam(required = false) Map<String, String> filters) {
+
+        int p = (page == null || page <= 0) ? 1 : page;
+        int ps = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
+
+        // 主干：先不做 keyword/filters 筛选（你后续需要再扩展）
+        return ApiResponse.ok(interviewScoreService.list(p, ps));
+    }
+
     @GetMapping("/interview-scores/export")
-    public ApiResponse listInterviewScoresExport(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer pageSize, @RequestParam(required = false) java.util.Map<String, String> filters) {
-        // TODO: implement
-        return ApiResponse.ok(null);
-    }
-    /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：批量导入成绩（Excel）
-     * 角色：招生管理员
-     * 关联：SR-ADM-1
-     * 备注：建议：返回 jobId，GET /jobs/{jobId} 查询导入结果
-     */
-    @PostMapping("/interview-scores/import")
-    public ApiResponse createInterviewScoresImport(@RequestBody Object request) {
-        // TODO: implement
-        return ApiResponse.ok(null);
-    }
-    /**
-     * 分组：2.1 考生与复试成绩（SR-ADM-1）
-     * 描述：成绩锁定（截止后只读）
-     * 角色：招生管理员/更高权限
-     * 关联：SR-ADM-1
-     */
-    @PostMapping("/interview-scores/lock")
-    public ApiResponse createInterviewScoresLock(@RequestBody Object request) {
-        // TODO: implement
+    public ApiResponse listInterviewScoresExport(@RequestParam(required = false) Integer page,
+                                                 @RequestParam(required = false) Integer pageSize,
+                                                 @RequestParam(required = false) Map<String, String> filters) {
+        // 主干不做导出
         return ApiResponse.ok(null);
     }
 
+    @PostMapping("/interview-scores/import")
+    public ApiResponse createInterviewScoresImport(@RequestBody Object request) {
+        // 主干不做导入
+        return ApiResponse.ok(null);
+    }
+
+    @PostMapping("/interview-scores/lock")
+    public ApiResponse createInterviewScoresLock(@RequestBody Object request) {
+        // 主干不做全局锁定（一次性提交：有记录即视为锁定）
+        return ApiResponse.ok(null);
+    }
 }

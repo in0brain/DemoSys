@@ -3,7 +3,8 @@ package com.example.demosys.domain.admissions.dto;
 import lombok.Data;
 
 @Data
-public class OffersDraftsPublishResponse {
+public class OffersDraftAddItemResponse {
     private String draftId;
-    private Boolean published;
+    private Long candidateId;
+    private Boolean added;
 }

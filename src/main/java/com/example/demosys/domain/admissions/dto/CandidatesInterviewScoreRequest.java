@@ -2,13 +2,11 @@ package com.example.demosys.domain.admissions.dto;
 
 import lombok.Data;
 
-/**
- * CandidatesInterviewScoreRequest
- * DTO 占位类：请按接口字段补充属性/校验注解。
- */
+import java.math.BigDecimal;
+
 @Data
 public class CandidatesInterviewScoreRequest {
 
-    // TODO: add fields
-
+    /** 复试成绩，0~100 */
+    private BigDecimal score;
 }

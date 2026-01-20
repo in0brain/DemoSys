@@ -2,13 +2,11 @@ package com.example.demosys.domain.admissions.dto;
 
 import lombok.Data;
 
-/**
- * OffersDraftsPublishRequest
- * DTO 占位类：请按接口字段补充属性/校验注解。
- */
 @Data
 public class OffersDraftsPublishRequest {
+    // 可选：操作人（从登录态取也行）
+    private Long operatorId;
 
-    // TODO: add fields
-
+    // 可选：发布备注（比如“2026春季拟录取公示”）
+    private String remark;
 }

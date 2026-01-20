@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demosys.domain.admissions.mapper.OfferPublicationMapper">
+
+    <!--
+      发布公示：把草稿写入公示表
+      ✅ 幂等：已存在 candidate_id 不重复插入
+      （最简闭环：一次性发布；避免多次点击导致重复数据）
+    -->
+    <insert id="insertFromDraft">
+        INSERT INTO admissions_offer_publication
+        (publication_id, draft_id, candidate_id, status, published_at, create_time, update_time)
+        SELECT
+        #{draftId}          AS publication_id,
+        d.draft_id          AS draft_id,
+        d.candidate_id      AS candidate_id,
+        'PUBLISHED'         AS status,
+        NOW()               AS published_at,
+        NOW()               AS create_time,
+        NOW()               AS update_time
+        FROM admissions_offer_draft d
+        WHERE d.draft_id = #{draftId}
+        AND NOT EXISTS (
+        SELECT 1
+        FROM admissions_offer_publication p
+        WHERE p.candidate_id = d.candidate_id
+        )
+    </insert>
+
+    <!--
+      公示查询（公开）
+      入参：keyword（来自 filters[keyword]）
+      逻辑：
+        - exam_no 精确匹配
+        - 或 name 模糊匹配
+      返回：
+        - offered: 1=已公示录取（publication 存在），0=未公示/未录取
+    -->
+    <select id="selectPublicOffersByKeyword"
+            resultType="com.example.demosys.domain.admissions.dto.PublicAdmissionsOfferRow">
+        SELECT
+        c.exam_no AS examNo,
+        c.name    AS name,
+        CASE WHEN p.candidate_id IS NULL THEN 0 ELSE 1 END AS offered
+        FROM admissions_candidate c
+        LEFT JOIN admissions_offer_publication p
+        ON p.candidate_id = c.id
+        <where>
+            <choose>
+                <!-- keyword 为空：默认只看已公示 -->
+                <when test="keyword == null or keyword == ''">
+                    p.candidate_id IS NOT NULL
+                </when>
+                <!-- keyword 非空：按考号精确 or 姓名模糊 -->
+                <otherwise>
+                    (c.exam_no = #{keyword}
+                    OR c.name LIKE CONCAT('%', #{keyword}, '%'))
+                </otherwise>
+            </choose>
+        </where>
+        ORDER BY c.id DESC
+        LIMIT 20
+    </select>
+</mapper>

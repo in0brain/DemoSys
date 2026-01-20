@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demosys.domain.admissions.mapper.InterviewScoreMapper">
+
+    <select id="selectByCandidateId"
+            resultType="com.example.demosys.domain.admissions.mapper.InterviewScoreMapper$InterviewScoreRow">
+        SELECT
+        id,
+        candidate_id AS candidateId,
+        score
+        FROM admissions_interview_score
+        WHERE candidate_id = #{candidateId}
+        LIMIT 1
+    </select>
+
+    <insert id="insert">
+        INSERT INTO admissions_interview_score (candidate_id, score, create_time, update_time)
+        VALUES (#{candidateId}, #{score}, NOW(), NOW())
+    </insert>
+
+    <select id="selectPage"
+            resultType="com.example.demosys.domain.admissions.mapper.InterviewScoreMapper$InterviewScoreListRow">
+        SELECT
+        c.id      AS candidateId,
+        c.exam_no AS examNo,
+        c.name    AS name,
+        c.major   AS major,
+        s.score   AS score
+        FROM admissions_interview_score s
+        JOIN admissions_candidate c ON c.id = s.candidate_id
+        ORDER BY s.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countAll" resultType="long">
+        SELECT COUNT(1)
+        FROM admissions_interview_score
+    </select>
+
+
+</mapper>
