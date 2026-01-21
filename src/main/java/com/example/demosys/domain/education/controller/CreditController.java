@@ -1,40 +1,47 @@
 package com.example.demosys.domain.education.controller;
 
-import org.springframework.web.bind.annotation.*;
 import com.example.demosys.common.api.ApiResponse;
+import com.example.demosys.domain.education.dto.CreditsMeResponse;
+import com.example.demosys.domain.education.dto.CreditsOverviewResponse;
+import com.example.demosys.domain.education.service.CreditSummaryService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
-/**
- * CreditController
- * <p>
- * 由《接口清单_RESTful_v1_对齐IR.xlsx》自动生成的 Controller 骨架（按模块/路径分组）。
- * 请在实现时：补充 DTO、鉴权（@PreAuthorize 或自定义注解）、校验（@Validated）与 Service 调用。
- * </p>
- */
+import java.util.Map;
+
 @RestController
 @RequestMapping("/education")
+@RequiredArgsConstructor
 public class CreditController {
 
-    /**
-     * 分组：3.3 学分统计与毕业资格（SR-EDU-3 / IR-EDU-1 / IR-EDU-3）
-     * 描述：我的学分进度（按必修/选修/环节）
-     * 角色：学生
-     * 关联：SR-EDU-3
-     */
+    private final CreditSummaryService creditSummaryService;
+
     @GetMapping("/credits/me")
-    public ApiResponse listCreditsMe(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer pageSize, @RequestParam(required = false) java.util.Map<String, String> filters) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+    public ApiResponse listCreditsMe(@RequestParam(required = false) Integer page,
+                                     @RequestParam(required = false) Integer pageSize,
+                                     @RequestParam(required = false) Map<String, String> filters) {
+        CreditsMeResponse resp = creditSummaryService.me();
+        return ApiResponse.ok(resp);
     }
+
     /**
-     * 分组：3.3 学分统计与毕业资格（SR-EDU-3 / IR-EDU-1 / IR-EDU-3）
-     * 描述：指定学生学分进度
-     * 角色：导师/培养管理员
-     * 关联：SR-EDU-3
+     * 学院：学分总览（按累计学分从低到高）
+     * SR：不分页，后续再加 page/pageSize
+     */
+    @GetMapping("/credits/overview")
+    public ApiResponse listCreditsOverview(@RequestParam(required = false) String keyword) {
+        // keyword 可选：按学号/姓名模糊（SR 可先不实现也行）
+        CreditsOverviewResponse resp = creditSummaryService.overview(keyword);
+        return ApiResponse.ok(resp);
+    }
+
+    /**
+     * 学院：指定学生学分进度
      */
     @GetMapping("/credits/students/{studentId}")
-    public ApiResponse getCreditsStudentsBy(@PathVariable("studentId") String studentId) {
-        // TODO: implement
-        return ApiResponse.ok(null);
+    public ApiResponse getCreditsStudentsBy(@PathVariable("studentId") Long studentId) {
+        CreditsMeResponse resp = creditSummaryService.byStudentId(studentId);
+        return ApiResponse.ok(resp);
     }
 
 }

@@ -1,54 +1,38 @@
 package com.example.demosys.domain.education.service;
 
-import com.example.demosys.domain.education.dto.EnrollmentsApproveRequest;
-import com.example.demosys.domain.education.dto.EnrollmentsCancelRequest;
-import com.example.demosys.domain.education.dto.EnrollmentsRejectRequest;
-import com.example.demosys.domain.education.dto.EnrollmentsRequest;
+import com.example.demosys.domain.education.dto.*;
+import java.util.List;
 
-/**
- * EnrollmentService
- * 自动生成：培养模块 Service（资源：enrollments）。
- */
 public interface EnrollmentService {
 
     /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：我的选课申请/课表
-     * 角色：学生
-     * 关联：SR-EDU-2
+     * 学生提交选课申请（一次性提交）
      */
-    Object listEnrollments(java.util.Map<String, Object> params);
+    EnrollmentsResponse submit(EnrollmentsRequest req);
 
     /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：提交选课申请（课程清单）
-     * 角色：学生
-     * 关联：SR-EDU-2
+     * 学生查看我的申请列表
      */
-    Object createEnrollments(EnrollmentsRequest request);
+    List<EnrollmentsResponse> listMine();
 
     /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：审批通过（导师/学院）
-     * 角色：导师/培养管理员
-     * 关联：SR-EDU-2
+     * 导师/学院待办列表
+     * node: "ADVISOR" 或 "COLLEGE"
      */
-    Object createEnrollmentsByIdApprove(EnrollmentsApproveRequest request);
+    ApprovalsEnrollmentsResponse listTodos(String node);
 
     /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：撤回申请（规则：未审批前）
-     * 角色：学生
-     * 关联：SR-EDU-2
+     * 导师/学院审批通过
      */
-    Object createEnrollmentsByIdCancel(EnrollmentsCancelRequest request);
+    EnrollmentsApproveResponse approve(EnrollmentsApproveRequest req);
 
     /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：退回（含原因）
-     * 角色：导师/培养管理员
-     * 关联：SR-EDU-2
+     * 导师/学院驳回
      */
-    Object createEnrollmentsByIdReject(EnrollmentsRejectRequest request);
+    EnrollmentsRejectResponse reject(EnrollmentsRejectRequest req);
 
+    /**
+     * 查看申请详情（含课程明细 + 审批记录）
+     */
+    EnrollmentsResponse getDetail(Long enrollmentId);
 }

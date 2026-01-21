@@ -1,5 +1,7 @@
 package com.example.demosys.domain.auth.service;
 
+import com.example.demosys.domain.auth.dto.MeDisplayDTO;
+
 /**
  * MeService
  * 自动生成：身份与权限模块资源 Me（来源：接口清单_RESTful_v1_对齐IR.xlsx）。
@@ -17,6 +19,9 @@ public interface MeService {
      * 关联：IR-AUTH-1, IR-AUTH-2
      * 备注：可选
      */
+
+    MeDisplayDTO getMeDisplay(java.util.Map<String, Object> params);
+
     Object listPermissions(java.util.Map<String, Object> params);
 
 }

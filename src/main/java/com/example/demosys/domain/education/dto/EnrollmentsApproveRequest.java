@@ -4,11 +4,9 @@ import lombok.Data;
 
 /**
  * EnrollmentsApproveRequest
- * DTO 占位：按接口字段补充属性/校验注解。
+ * DTO 占位：通过
  */
 @Data
 public class EnrollmentsApproveRequest {
-
-    // TODO: add fields
-
+    private Long enrollmentId;
 }

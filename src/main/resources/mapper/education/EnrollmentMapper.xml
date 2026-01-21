@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demosys.domain.education.mapper.EnrollmentMapper">
+
+    <!-- =========================
+         1) 插入：edu_course_apply（申请单主表）
+         - enrollmentNo/studentName 在表里不存在：由查询阶段 join/派生
+         ========================= -->
+    <insert id="insertEnrollment" parameterType="com.example.demosys.domain.education.entity.Enrollment"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO edu_course_apply
+        (
+        student_id,
+        status,
+        current_node,
+        submit_time,
+        finish_time,
+        created_at,
+        updated_at
+        )
+        VALUES
+        (
+        #{studentId},
+        #{status},
+        #{currentNode},
+        #{submitTime},
+        #{finishTime},
+        #{createdAt},
+        #{updatedAt}
+        )
+    </insert>
+
+    <!-- =========================
+         2) 批量插入：edu_course_apply_item（课程明细）
+         - apply 表明细没有 course_id（按你约定）
+         ========================= -->
+    <insert id="insertEnrollmentItems" parameterType="map">
+        INSERT INTO edu_course_apply_item
+        (
+        apply_id,
+        course_code,
+        course_name,
+        credit,
+        created_at
+        )
+        VALUES
+        <foreach collection="items" item="it" separator=",">
+            (
+            #{enrollmentId},
+            #{it.courseCode},
+            #{it.courseName},
+            #{it.credit},
+            #{it.createdAt}
+            )
+        </foreach>
+    </insert>
+
+    <!-- =========================
+         3) 查询：学生我的申请列表
+         - enrollment_no：临时用 id 派生（展示用）
+         - student_name：join sys_user.display_name
+         ========================= -->
+    <select id="selectByStudentId" resultType="com.example.demosys.domain.education.entity.Enrollment">
+        SELECT
+        a.id                 AS id,
+        CAST(a.id AS CHAR)   AS enrollmentNo,
+        a.student_id         AS studentId,
+        u.display_name       AS studentName,
+        a.status             AS status,
+        a.current_node       AS currentNode,
+        a.submit_time        AS submitTime,
+        a.finish_time        AS finishTime,
+        a.created_at         AS createdAt,
+        a.updated_at         AS updatedAt
+        FROM edu_course_apply a
+        LEFT JOIN sys_user u ON u.id = a.student_id
+        WHERE a.student_id = #{studentId}
+        ORDER BY a.created_at DESC
+    </select>
+
+    <!-- =========================
+         4) 查询：审批待办列表（导师/学院）
+         ========================= -->
+    <select id="selectTodos" resultType="com.example.demosys.domain.education.entity.Enrollment">
+        SELECT
+        a.id                 AS id,
+        CAST(a.id AS CHAR)   AS enrollmentNo,
+        a.student_id         AS studentId,
+        u.display_name       AS studentName,
+        a.status             AS status,
+        a.current_node       AS currentNode,
+        a.submit_time        AS submitTime,
+        a.finish_time        AS finishTime,
+        a.created_at         AS createdAt,
+        a.updated_at         AS updatedAt
+        FROM edu_course_apply a
+        LEFT JOIN sys_user u ON u.id = a.student_id
+        WHERE a.current_node = #{currentNode}
+        AND a.status = #{status}
+        ORDER BY a.submit_time ASC
+    </select>
+
+    <!-- =========================
+         5) 查询：申请单课程明细
+         - 表名/字段改为 edu_course_apply_item / apply_id
+         ========================= -->
+    <select id="selectItemsByEnrollmentId" resultType="com.example.demosys.domain.education.entity.EnrollmentItem">
+        SELECT
+        i.id            AS id,
+        i.apply_id      AS enrollmentId,
+        NULL            AS courseId,
+        i.course_code   AS courseCode,
+        i.course_name   AS courseName,
+        i.credit        AS credit,
+        i.created_at    AS createdAt
+        FROM edu_course_apply_item i
+        WHERE i.apply_id = #{enrollmentId}
+        ORDER BY i.id ASC
+    </select>
+
+    <!-- =========================
+         6) 查询：审批记录
+         - 表名改为 edu_course_apply_audit
+         - auditorName 通过 join sys_user.display_name 得到
+         - auditorRole 这里先置空（SR 不关键）
+         ========================= -->
+    <select id="selectAuditsByEnrollmentId" resultType="com.example.demosys.domain.education.entity.EnrollmentAudit">
+        SELECT
+        au.id              AS id,
+        au.apply_id        AS enrollmentId,
+        au.node            AS node,
+        au.auditor_id      AS auditorId,
+        u.display_name     AS auditorName,
+        NULL               AS auditorRole,
+        au.action          AS action,
+        au.action_time     AS actionTime,
+        au.created_at      AS createdAt
+        FROM edu_course_apply_audit au
+        LEFT JOIN sys_user u ON u.id = au.auditor_id
+        WHERE au.apply_id = #{enrollmentId}
+        ORDER BY au.action_time ASC, au.id ASC
+    </select>
+
+    <!-- =========================
+         7) 推进状态机：导师通过
+         ========================= -->
+    <update id="updateAdvisorApprove">
+        UPDATE edu_course_apply
+        SET
+        status = 'ADVISOR_APPROVED',
+        current_node = 'COLLEGE',
+        updated_at = NOW()
+        WHERE id = #{enrollmentId}
+        AND status = 'SUBMITTED'
+        AND current_node = 'ADVISOR'
+    </update>
+
+    <!-- =========================
+         8) 推进状态机：学院通过（终态）
+         ========================= -->
+    <update id="updateCollegeApprove">
+        UPDATE edu_course_apply
+        SET
+        status = 'COLLEGE_APPROVED',
+        current_node = 'DONE',
+        finish_time = NOW(),
+        updated_at = NOW()
+        WHERE id = #{enrollmentId}
+        AND status = 'ADVISOR_APPROVED'
+        AND current_node = 'COLLEGE'
+    </update>
+
+    <!-- =========================
+         9) 推进状态机：驳回（任一节点）
+         ========================= -->
+    <update id="updateReject">
+        UPDATE edu_course_apply
+        SET
+        status = 'REJECTED',
+        current_node = 'DONE',
+        finish_time = NOW(),
+        updated_at = NOW()
+        WHERE id = #{enrollmentId}
+        AND current_node = #{currentNode}
+        AND status = #{status}
+    </update>
+
+    <!-- =========================
+         10) 插入审批记录：edu_course_apply_audit
+         - 你的新表结构没有 auditor_name/auditor_role，所以这里只插表里存在的列
+         ========================= -->
+    <insert id="insertAudit" parameterType="com.example.demosys.domain.education.entity.EnrollmentAudit"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO edu_course_apply_audit
+        (
+        apply_id,
+        node,
+        auditor_id,
+        action,
+        action_time,
+        created_at
+        )
+        VALUES
+        (
+        #{enrollmentId},
+        #{node},
+        #{auditorId},
+        #{action},
+        #{actionTime},
+        #{createdAt}
+        )
+    </insert>
+
+    <!-- =========================
+         11) 学分页：查询学生所有“学院终审通过”的课程
+         ========================= -->
+    <select id="selectApprovedCoursesByStudentId" resultType="map">
+        SELECT
+        i.course_code   AS courseCode,
+        i.course_name   AS courseName,
+        i.credit        AS credit,
+        a.id            AS fromEnrollmentId,
+        a.finish_time   AS approvedTime
+        FROM edu_course_apply a
+        JOIN edu_course_apply_item i ON i.apply_id = a.id
+        WHERE a.student_id = #{studentId}
+        AND a.status = 'COLLEGE_APPROVED'
+        ORDER BY a.finish_time DESC, i.id ASC
+    </select>
+
+    <!-- =========================
+         12) 计算某申请单学分和
+         ========================= -->
+    <select id="sumCreditsByEnrollmentId" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(credit), 0)
+        FROM edu_course_apply_item
+        WHERE apply_id = #{enrollmentId}
+    </select>
+
+    <!-- 13) 查询单条 -->
+    <select id="selectById" resultType="com.example.demosys.domain.education.entity.Enrollment">
+        SELECT
+        a.id                 AS id,
+        CAST(a.id AS CHAR)   AS enrollmentNo,
+        a.student_id         AS studentId,
+        u.display_name       AS studentName,
+        a.status             AS status,
+        a.current_node       AS currentNode,
+        a.submit_time        AS submitTime,
+        a.finish_time        AS finishTime,
+        a.created_at         AS createdAt,
+        a.updated_at         AS updatedAt
+        FROM edu_course_apply a
+        LEFT JOIN sys_user u ON u.id = a.student_id
+        WHERE a.id = #{enrollmentId}
+        LIMIT 1
+    </select>
+
+</mapper>

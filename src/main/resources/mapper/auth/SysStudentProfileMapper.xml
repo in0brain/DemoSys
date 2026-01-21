@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demosys.domain.auth.mapper.SysStudentProfileMapper">
+
+    <select id="selectByUserId"
+            resultType="com.example.demosys.domain.auth.entity.SysStudentProfile">
+        SELECT
+        id,
+        user_id,
+        student_no,
+        college_org_id,
+        dept_org_id,
+        major_name,
+        enrollment_year,
+        degree_level,
+        student_status
+        FROM sys_student_profile
+        WHERE user_id = #{userId}
+    </select>
+
+</mapper>

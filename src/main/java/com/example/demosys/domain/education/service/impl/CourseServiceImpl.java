@@ -1,37 +1,67 @@
 package com.example.demosys.domain.education.service.impl;
 
-import org.springframework.stereotype.Service;
+import com.example.demosys.common.exception.BizException;
+import com.example.demosys.domain.education.dto.CoursesResponse;
+import com.example.demosys.domain.education.entity.Course;
+import com.example.demosys.domain.education.mapper.CourseMapper;
 import com.example.demosys.domain.education.service.CourseService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
-/**
- * CourseServiceImpl
- * 自动生成的实现骨架（TODO）。
- */
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 @Service
+@RequiredArgsConstructor
 public class CourseServiceImpl implements CourseService {
 
-    /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：可选课程列表（筛选：学期/学院/时间/关键字）
-     * 角色：学生
-     * 关联：SR-EDU-2
-     */
+    private final CourseMapper courseMapper;
+
     @Override
-    public Object listCourses(java.util.Map<String, Object> params) {
-        // TODO: implement
-        return null;
+    public CoursesResponse list(String keyword) {
+        String kw = keyword == null ? null : keyword.trim();
+        List<Course> rows = courseMapper.selectCourses(kw);
+        if (rows == null || rows.isEmpty()) {
+            CoursesResponse resp = new CoursesResponse();
+            resp.setItems(Collections.emptyList());
+            return resp;
+        }
+
+        List<CoursesResponse.CourseItem> items = new ArrayList<>();
+        for (Course c : rows) {
+            items.add(toItem(c));
+        }
+
+        CoursesResponse resp = new CoursesResponse();
+        resp.setItems(items);
+        return resp;
     }
 
-    /**
-     * 分组：3.2 课程与选课（SR-EDU-2）
-     * 描述：课程详情（容量、时间、学分）
-     * 角色：登录用户
-     * 关联：SR-EDU-2
-     */
     @Override
-    public Object getCoursesById(java.util.Map<String, Object> params) {
-        // TODO: implement
-        return null;
+    public CoursesResponse.CourseItem getByCourseCode(String courseCode) {
+        if (courseCode == null || courseCode.trim().isEmpty()) {
+            throw new BizException("courseCode 不能为空");
+        }
+        Course c = courseMapper.selectByCourseCode(courseCode.trim());
+        if (c == null) return null;
+        return toItem(c);
     }
 
+    @Override
+    public CoursesResponse.CourseItem getById(Long id) {
+        if (id == null) throw new BizException("id 不能为空");
+        Course c = courseMapper.selectById(id);
+        if (c == null) return null;
+        return toItem(c);
+    }
+
+    private CoursesResponse.CourseItem toItem(Course c) {
+        CoursesResponse.CourseItem it = new CoursesResponse.CourseItem();
+        it.setId(c.getId());
+        it.setCourseCode(c.getCourseCode());
+        it.setCourseName(c.getCourseName());
+        it.setCredit(c.getCredit());
+        return it;
+    }
 }

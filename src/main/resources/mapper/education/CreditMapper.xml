@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demosys.domain.education.mapper.CreditMapper">
+
+    <select id="selectCreditSummaryByStudentId"
+            resultType="com.example.demosys.domain.education.entity.CreditSummary">
+        SELECT
+        IFNULL(s.id, 0)                         AS id,
+        #{studentId}                            AS studentId,
+        COALESCE(s.total_credit, 0)             AS totalCredit,
+        COALESCE(s.updated_at, NOW())           AS updatedAt
+        FROM (SELECT 1) t
+        LEFT JOIN edu_credit_summary s
+        ON s.student_id = #{studentId}
+        LIMIT 1
+    </select>
+
+    <insert id="upsertAddCredit">
+        INSERT INTO edu_credit_summary
+        (student_id, total_credit, updated_at)
+        VALUES
+        (#{studentId}, #{deltaCredit}, NOW())
+        ON DUPLICATE KEY UPDATE
+        total_credit = total_credit + VALUES(total_credit),
+        updated_at = NOW()
+    </insert>
+
+    <update id="overwriteTotalCredit">
+        UPDATE edu_credit_summary
+        SET
+        total_credit = #{totalCredit},
+        updated_at = NOW()
+        WHERE student_id = #{studentId}
+    </update>
+
+    <select id="selectPassedCoursesByStudentId" resultType="map">
+        SELECT
+        i.course_code AS courseCode,
+        i.course_name AS courseName,
+        i.credit      AS credit,
+        e.id          AS fromEnrollmentId,
+        e.finish_time AS approvedTime
+        FROM edu_enrollment e
+        JOIN edu_enrollment_item i ON i.enrollment_id = e.id
+        WHERE e.student_id = #{studentId}
+        AND e.status = 'COLLEGE_APPROVED'
+        ORDER BY e.finish_time DESC, i.id ASC
+    </select>
+
+    <select id="selectCreditOverview"
+            resultType="com.example.demosys.domain.education.dto.CreditsOverviewResponse$Item">
+        SELECT
+        u.id                                  AS studentId,
+        u.display_name                        AS studentName,
+        COALESCE(s.total_credit, 0)           AS totalCredit,
+        DATE_FORMAT(COALESCE(s.updated_at, u.updated_at), '%Y-%m-%d %H:%i:%s') AS updatedAt
+        FROM sys_user u
+        LEFT JOIN edu_credit_summary s ON s.student_id = u.id
+        WHERE 1=1
+        AND u.user_type = 'student'
+        <if test="keyword != null and keyword != ''">
+            AND (
+            CAST(u.id AS CHAR) LIKE CONCAT('%', #{keyword}, '%')
+            OR u.display_name LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY COALESCE(s.total_credit, 0) ASC, u.id ASC
+    </select>
+
+</mapper>

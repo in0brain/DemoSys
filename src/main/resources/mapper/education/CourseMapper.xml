@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.demosys.domain.education.mapper.CourseMapper">
+
+    <!-- =========================
+         1) 课程列表（可选 keyword：按 code/name 模糊）
+         - 给学生选课页用
+         ========================= -->
+    <select id="selectCourses"
+            resultType="com.example.demosys.domain.education.entity.Course">
+        SELECT
+        id           AS id,
+        course_code  AS courseCode,
+        course_name  AS courseName,
+        credit       AS credit,
+        created_at   AS createdAt,
+        updated_at   AS updatedAt
+        FROM edu_course
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (
+                course_code LIKE CONCAT('%', #{keyword}, '%')
+                OR course_name LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY course_code ASC
+    </select>
+
+    <!-- =========================
+         2) 按 courseCode 精确查询（可用于去重/校验可选）
+         ========================= -->
+    <select id="selectByCourseCode"
+            resultType="com.example.demosys.domain.education.entity.Course">
+        SELECT
+        id           AS id,
+        course_code  AS courseCode,
+        course_name  AS courseName,
+        credit       AS credit,
+        created_at   AS createdAt,
+        updated_at   AS updatedAt
+        FROM edu_course
+        WHERE course_code = #{courseCode}
+        LIMIT 1
+    </select>
+
+    <!-- =========================
+         3) 按 courseId 查询
+         ========================= -->
+    <select id="selectById"
+            resultType="com.example.demosys.domain.education.entity.Course">
+        SELECT
+        id           AS id,
+        course_code  AS courseCode,
+        course_name  AS courseName,
+        credit       AS credit,
+        created_at   AS createdAt,
+        updated_at   AS updatedAt
+        FROM edu_course
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <!-- =========================
+         4) 批量按 courseCode 查询（提交申请时可用：把课程名/学分补齐）
+         - SR 允许不校验，但这个方法很实用
+         ========================= -->
+    <select id="selectByCourseCodes"
+            resultType="com.example.demosys.domain.education.entity.Course">
+        SELECT
+        id           AS id,
+        course_code  AS courseCode,
+        course_name  AS courseName,
+        credit       AS credit,
+        created_at   AS createdAt,
+        updated_at   AS updatedAt
+        FROM edu_course
+        WHERE course_code IN
+        <foreach collection="courseCodes" item="c" open="(" separator="," close=")">
+            #{c}
+        </foreach>
+    </select>
+
+    <!-- =========================
+         5) 新增课程（初始化/后台维护用）
+         ========================= -->
+    <insert id="insertCourse"
+            parameterType="com.example.demosys.domain.education.entity.Course"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO edu_course
+        (course_code, course_name, credit, created_at, updated_at)
+        VALUES
+        (#{courseCode}, #{courseName}, #{credit}, NOW(), NOW())
+    </insert>
+
+    <!-- =========================
+         6) 更新课程（可选）
+         ========================= -->
+    <update id="updateCourseById"
+            parameterType="com.example.demosys.domain.education.entity.Course">
+        UPDATE edu_course
+        SET
+        course_code = #{courseCode},
+        course_name = #{courseName},
+        credit = #{credit},
+        updated_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+</mapper>

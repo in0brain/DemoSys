@@ -24,6 +24,26 @@
         WHERE username = #{username}
             LIMIT 1
     </select>
+    <select id="selectById" resultType="com.example.demosys.domain.auth.entity.SysUser">
+        SELECT
+        id,
+        username,
+        display_name AS displayName,
+        user_type AS userType,
+        org_id AS orgId,
+        status,
+        auth_provider AS authProvider,
+        password_hash AS passwordHash,
+        password_algo AS passwordAlgo,
+        password_updated_at AS passwordUpdatedAt,
+        last_login_at AS lastLoginAt,
+        created_at AS createdAt,
+        updated_at AS updatedAt
+        FROM sys_user
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
 
     <update id="updateLastLoginAt">
         UPDATE sys_user

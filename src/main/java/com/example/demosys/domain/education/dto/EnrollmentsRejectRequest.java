@@ -8,7 +8,5 @@ import lombok.Data;
  */
 @Data
 public class EnrollmentsRejectRequest {
-
-    // TODO: add fields
-
+    private Long enrollmentId;
 }

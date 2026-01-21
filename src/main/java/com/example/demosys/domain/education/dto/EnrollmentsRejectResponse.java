@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 public class EnrollmentsRejectResponse {
-
-    // TODO: add fields
-
+    private Long enrollmentId;
+    private EnrollmentStatus status;      // REJECTED
+    private ApprovalNode currentNode; // DONE
 }

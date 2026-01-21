@@ -1,25 +1,23 @@
 package com.example.demosys.domain.education.service;
 
-/**
- * CreditSummaryService
- * 自动生成：培养模块 Service（资源：credits）。
- */
+import com.example.demosys.domain.education.dto.CreditsMeResponse;
+import com.example.demosys.domain.education.dto.CreditsOverviewResponse;
+
 public interface CreditSummaryService {
 
     /**
-     * 分组：3.3 学分统计与毕业资格（SR-EDU-3 / IR-EDU-1 / IR-EDU-3）
-     * 描述：我的学分进度（按必修/选修/环节）
-     * 角色：学生
-     * 关联：SR-EDU-3
+     * 学生本人学分与已通过课程
      */
-    Object listCreditsMe(java.util.Map<String, Object> params);
+    CreditsMeResponse me();
 
     /**
-     * 分组：3.3 学分统计与毕业资格（SR-EDU-3 / IR-EDU-1 / IR-EDU-3）
-     * 描述：指定学生学分进度
-     * 角色：导师/培养管理员
-     * 关联：SR-EDU-3
+     * 学院：学分总览（全体学生，按累计学分从低到高）
+     * keyword 可选：学号/姓名模糊
      */
-    Object getCreditsStudentsById(java.util.Map<String, Object> params);
+    CreditsOverviewResponse overview(String keyword);
 
+    /**
+     * 学院：指定学生学分与已通过课程
+     */
+    CreditsMeResponse byStudentId(Long studentId);
 }

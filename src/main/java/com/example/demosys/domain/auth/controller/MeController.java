@@ -7,6 +7,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -19,7 +20,7 @@ public class MeController {
         this.meService = meService;
     }
 
-    @GetMapping("/")
+    @GetMapping("")
     public ApiResponse me(@RequestParam(required = false) Map<String, Object> params) {
         return ApiResponse.ok(meService.getProfile(params));
     }
@@ -28,7 +29,7 @@ public class MeController {
     public ApiResponse listPermissions(@RequestParam(required = false) Integer page,
                                        @RequestParam(required = false) Integer pageSize,
                                        @RequestParam(required = false) Map<String, Object> filters) {
-        return ApiResponse.ok(meService.listPermissions(filters));
+        return ApiResponse.ok(Collections.emptyList());
     }
     @GetMapping("/debug/auth")
     public Object debugAuth() {
@@ -40,4 +41,14 @@ public class MeController {
         );
     }
 
+    // TODO: 第二迭代实现：仅允许更新 phone/email/title/avatarUrl 等白名单字段，记录审计日志
+    @PutMapping("/update/profile")
+    public ApiResponse updateProfile(@RequestBody Map<String, Object> req) {
+        return ApiResponse.ok();
+    }
+
+    @GetMapping("/display/profile")
+    public ApiResponse getDisplayProfile(@RequestParam(required = false) Map<String, Object> params) {
+        return ApiResponse.ok(meService.getMeDisplay(params));
+    }
 }
